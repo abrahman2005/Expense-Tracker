@@ -17,7 +17,7 @@
 
     h1 {
       margin-top: 40px;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
       color: #006064;
       font-size: 2.2rem;
     }
@@ -31,15 +31,15 @@
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
     }
 
-    #expense-form {
+    #balance-form, #expense-form {
       display: flex;
       flex-wrap: wrap;
       gap: 15px;
       justify-content: center;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
     }
 
-    #expense-form input, #expense-form button {
+    input, button {
       padding: 12px;
       font-size: 1em;
       border: 1px solid #ccc;
@@ -47,11 +47,11 @@
       outline: none;
     }
 
-    #expense-form input:focus {
+    input:focus {
       border-color: #0097a7;
     }
 
-    #expense-form button {
+    button {
       background-color: #00796b;
       color: white;
       border: none;
@@ -59,7 +59,7 @@
       transition: background 0.3s;
     }
 
-    #expense-form button:hover {
+    button:hover {
       background-color: #004d40;
     }
 
@@ -104,10 +104,28 @@
       color: #33691e;
       padding: 12px 20px;
       border-radius: 12px;
+      margin-top: 10px;
+    }
+
+    #balance-warning {
+      color: red;
+      font-size: 0.95rem;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    footer {
+      margin-top: 40px;
+      padding: 15px;
+      color: #004d40;
+      background: #e0f2f1;
+      width: 100%;
+      text-align: center;
+      font-weight: 500;
     }
 
     @media (max-width: 600px) {
-      #expense-form {
+      #expense-form, #balance-form {
         flex-direction: column;
         align-items: center;
       }
@@ -119,6 +137,14 @@
   <h1>💸 Expense Tracker</h1>
 
   <div class="container">
+    
+    <form id="balance-form">
+      <input type="number" id="balance-input" placeholder="Enter total balance ₹" required>
+      <button type="submit">Set Balance</button>
+    </form>
+
+    <div id="balance-warning"></div>
+
     <form id="expense-form">
       <input type="text" id="desc" placeholder="Expense Description" required>
       <input type="number" id="amount" placeholder="Amount ₹" required>
@@ -143,23 +169,34 @@
       <span id="total-items">Total Items: 0</span>
       <span id="total-amount">Total Amount: ₹0.00</span>
       <span id="average-amount">Average: ₹0.00</span>
+      <span id="current-balance">Balance: ₹0.00</span>
     </div>
   </div>
 
+  <footer>
+    Experience Tracker by Abdur Rahman Waseem Khot
+  </footer>
+
   <script>
     const form = document.getElementById("expense-form");
+    const balanceForm = document.getElementById("balance-form");
     const descInput = document.getElementById("desc");
     const amountInput = document.getElementById("amount");
-    const tableBody = document.getElementById("expense-body");
+    const balanceInput = document.getElementById("balance-input");
+    const warning = document.getElementById("balance-warning");
 
+    const tableBody = document.getElementById("expense-body");
     const totalItemsEl = document.getElementById("total-items");
     const totalAmountEl = document.getElementById("total-amount");
     const averageAmountEl = document.getElementById("average-amount");
+    const currentBalanceEl = document.getElementById("current-balance");
 
     let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
+    let balance = parseFloat(localStorage.getItem("balance")) || 0;
 
     function updateLocalStorage() {
       localStorage.setItem("expenses", JSON.stringify(expenses));
+      localStorage.setItem("balance", balance.toFixed(2));
     }
 
     function updateSummary() {
@@ -170,6 +207,7 @@
       totalItemsEl.textContent = `Total Items: ${totalItems}`;
       totalAmountEl.textContent = `Total Amount: ₹${totalAmount.toFixed(2)}`;
       averageAmountEl.textContent = `Average: ₹${average.toFixed(2)}`;
+      currentBalanceEl.textContent = `Balance: ₹${balance.toFixed(2)}`;
     }
 
     function createRow(desc, amount, dateTime) {
@@ -185,6 +223,7 @@
       row.querySelector(".delete-btn").addEventListener("click", () => {
         row.remove();
         expenses = expenses.filter(exp => !(exp.desc === desc && exp.amount === amount && exp.dateTime === dateTime));
+        balance += amount;
         updateLocalStorage();
         updateSummary();
       });
@@ -207,24 +246,41 @@
 
       if (!desc || isNaN(amount) || amount <= 0) return;
 
+      if (amount > balance) {
+        warning.textContent = "❌ Not enough balance for this expense.";
+        return;
+      } else {
+        warning.textContent = "";
+      }
+
       const now = new Date();
       const dateTime = now.toLocaleString();
 
       const newExpense = { desc, amount, dateTime };
       expenses.push(newExpense);
-      updateLocalStorage();
+      balance -= amount;
 
+      updateLocalStorage();
       createRow(desc, amount, dateTime);
       descInput.value = "";
       amountInput.value = "";
       updateSummary();
     });
 
+    balanceForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      const inputBalance = parseFloat(balanceInput.value.trim());
+      if (!isNaN(inputBalance) && inputBalance >= 0) {
+        balance = inputBalance;
+        updateLocalStorage();
+        updateSummary();
+        warning.textContent = "";
+        balanceInput.value = "";
+      }
+    });
+
     loadExpenses();
   </script>
 
-<footer style="margin-top: 40px; padding: 15px; color: #004d40; background: #e0f2f1; width: 100%; text-align: center; font-weight: 500;">
-  Created Tracker by Abdur Rahman Waseem Khot
-</footer>
 </body>
 </html>
