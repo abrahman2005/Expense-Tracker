@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Expense Tracker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to bottom right, #e0f7fa, #b2ebf2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin-top: 40px;
+      margin-bottom: 20px;
+      color: #006064;
+      font-size: 2.2rem;
+    }
+
+    .container {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 30px;
+      width: 90%;
+      max-width: 900px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    }
+
+    #expense-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 25px;
+    }
+
+    #expense-form input, #expense-form button {
+      padding: 12px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      outline: none;
+    }
+
+    #expense-form input:focus {
+      border-color: #0097a7;
+    }
+
+    #expense-form button {
+      background-color: #00796b;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    #expense-form button:hover {
+      background-color: #004d40;
+    }
+
+    #expense-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    #expense-table th, #expense-table td {
+      border: 1px solid #ddd;
+      padding: 14px;
+      text-align: center;
+    }
+
+    #expense-table th {
+      background-color: #e0f2f1;
+      color: #004d40;
+      font-weight: 600;
+    }
+
+    #expense-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    .delete-btn {
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .delete-btn:hover {
+      color: red;
+    }
+
+    #summary {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      font-size: 1.1rem;
+      background-color: #f1f8e9;
+      color: #33691e;
+      padding: 12px 20px;
+      border-radius: 12px;
+    }
+
+    @media (max-width: 600px) {
+      #expense-form {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>💸 Expense Tracker</h1>
+
+  <div class="container">
+    <form id="expense-form">
+      <input type="text" id="desc" placeholder="Expense Description" required>
+      <input type="number" id="amount" placeholder="Amount ₹" required>
+      <button type="submit">Add Expense</button>
+    </form>
+
+    <table id="expense-table">
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Amount (₹)</th>
+          <th>Date & Time</th>
+          <th>Delete</th>
+        </tr>
+      </thead>
+      <tbody id="expense-body">
+        <!-- Expenses will be listed here -->
+      </tbody>
+    </table>
+
+    <div id="summary">
+      <span id="total-items">Total Items: 0</span>
+      <span id="total-amount">Total Amount: ₹0.00</span>
+      <span id="average-amount">Average: ₹0.00</span>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("expense-form");
+    const descInput = document.getElementById("desc");
+    const amountInput = document.getElementById("amount");
+    const tableBody = document.getElementById("expense-body");
+
+    const totalItemsEl = document.getElementById("total-items");
+    const totalAmountEl = document.getElementById("total-amount");
+    const averageAmountEl = document.getElementById("average-amount");
+
+    let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
+
+    function updateLocalStorage() {
+      localStorage.setItem("expenses", JSON.stringify(expenses));
+    }
+
+    function updateSummary() {
+      const totalItems = expenses.length;
+      const totalAmount = expenses.reduce((sum, item) => sum + item.amount, 0);
+      const average = totalItems ? (totalAmount / totalItems) : 0;
+
+      totalItemsEl.textContent = `Total Items: ${totalItems}`;
+      totalAmountEl.textContent = `Total Amount: ₹${totalAmount.toFixed(2)}`;
+      averageAmountEl.textContent = `Average: ₹${average.toFixed(2)}`;
+    }
+
+    function createRow(desc, amount, dateTime) {
+      const row = document.createElement("tr");
+
+      row.innerHTML = `
+        <td>${desc}</td>
+        <td>₹${amount.toFixed(2)}</td>
+        <td>${dateTime}</td>
+        <td><span class="delete-btn">🗑</span></td>
+      `;
+
+      row.querySelector(".delete-btn").addEventListener("click", () => {
+        row.remove();
+        expenses = expenses.filter(exp => !(exp.desc === desc && exp.amount === amount && exp.dateTime === dateTime));
+        updateLocalStorage();
+        updateSummary();
+      });
+
+      tableBody.appendChild(row);
+    }
+
+    function loadExpenses() {
+      expenses.forEach(({ desc, amount, dateTime }) => {
+        createRow(desc, amount, dateTime);
+      });
+      updateSummary();
+    }
+
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const desc = descInput.value.trim();
+      const amount = parseFloat(amountInput.value.trim());
+
+      if (!desc || isNaN(amount) || amount <= 0) return;
+
+      const now = new Date();
+      const dateTime = now.toLocaleString();
+
+      const newExpense = { desc, amount, dateTime };
+      expenses.push(newExpense);
+      updateLocalStorage();
+
+      createRow(desc, amount, dateTime);
+      descInput.value = "";
+      amountInput.value = "";
+      updateSummary();
+    });
+
+    loadExpenses();
+  </script>
+
+<footer style="margin-top: 40px; padding: 15px; color: #004d40; background: #e0f2f1; width: 100%; text-align: center; font-weight: 500;">
+  Experience Tracker by Abdur Rahman Waseem Khot
+</footer>
+</body>
+</html>
